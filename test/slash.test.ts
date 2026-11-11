@@ -76,6 +76,29 @@ test("pone arriba los comandos usados sin agregar ni quitar items", () => {
 	assert.equal(ordered.items.length, COMMANDS.length);
 });
 
+test("el top se calcula solo entre los que matchean el filtro", () => {
+	let store: FrecencyStore = { commands: {} };
+	// Cuatro comandos con uso, todos matchean `/skill:`: solo los tres mejores suben.
+	for (const [name, uses] of [["skill:commit", 1], ["skill:review", 6], ["skill:java", 4], ["skill:deploy", 2]] as const) {
+		for (let index = 0; index < uses; index += 1) store = recordUsage(store, name, NOW);
+	}
+	const filtered: AutocompleteItem[] = [
+		{ value: "skill:commit", label: "skill:commit" },
+		{ value: "skill:deploy", label: "skill:deploy" },
+		{ value: "skill:java", label: "skill:java" },
+		{ value: "skill:review", label: "skill:review" },
+	];
+
+	const ordered = reorderSuggestions(suggestions("/skill:", filtered), ["/skill:"], 0, 7, store, NOW);
+
+	assert.ok(ordered);
+	// Top 3: review, java, deploy. `commit` no entra y queda en su lugar original.
+	assert.deepEqual(
+		ordered.items.map((entry) => entry.value),
+		["skill:review", "skill:java", "skill:deploy", "skill:commit"],
+	);
+});
+
 test("con un filtro escrito reordena solo entre los que matchean", () => {
 	const store = recordUsage(emptyStore(), "skill:review", NOW);
 	const filtered = [COMMANDS[2]!, COMMANDS[1]!];

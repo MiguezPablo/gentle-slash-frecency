@@ -15,7 +15,8 @@ Extensión de Pi que ordena el autocompletado de slash commands por **frecency**
 
 - Registra cada uso de un comando que pasa por el evento `input` (`/skill:foo`, `/mi-template`, …), sin tocar el texto que escribiste.
 - Puntúa cada comando con `usos × 0.5^(días sin usar / 7)`: la frecuencia manda, pero un comando que no usás desde hace tres semanas pesa ocho veces menos que uno usado hoy.
-- Reordena las sugerencias de slash commands: primero los usados por puntaje descendente, después los no usados en su orden original. Con un filtro escrito (`/sk`) reordena solo entre los que matchean.
+- Reordena las sugerencias de slash commands en dos partes: arriba los **3 comandos de mayor puntaje**, en orden descendente; del cuarto en adelante, el orden original de Pi, tenga usos o no. Con un filtro escrito (`/sk`) el top 3 se calcula solo entre los que matchean.
+- La cola no se mueve: un comando usado que no entra al top 3 vuelve a su lugar de siempre, así que las posiciones son predecibles y solo cambian cuando cambia lo que más usás.
 - Deja intacto todo lo que no es un slash command: `@archivo`, rutas y el completado de argumentos (`/model /ant`) pasan sin cambios.
 - Nunca rompe el editor: un archivo ausente, ilegible o con JSON corrupto equivale a "sin datos", y una escritura fallida solo pierde el uso en memoria.
 
@@ -80,7 +81,8 @@ Para olvidar un solo comando, borrá su entrada del JSON con el editor cerrado. 
 - **Comandos registrados con `pi.registerCommand`**: Pi corre su handler antes del evento `input`, así que esos usos no se registran; sus sugerencias sí se ordenan con lo que haya de las skills y los templates.
 - **En subagentes hijos** la extensión no hace nada: no hay nadie tipeando ahí.
 - **Sin UI interactiva** (modo print o JSON) no se registra el provider de autocompletado.
-- El orden es estable: dos comandos con el mismo puntaje conservan el orden que traía Pi, y los no usados nunca se mueven entre sí.
+- El orden es estable: dos comandos con el mismo puntaje conservan el orden que traía Pi, y la cola (del cuarto en adelante) nunca se mueve entre sí.
+- **Cantidad promovida**: 3 por defecto (`TOP_COUNT` en `src/frecency.ts`). El tope es un parámetro de `orderByFrecency`, no un número suelto: se puede probar con 1, 3 o 5 sin tocar la lógica.
 
 ## Desarrollo
 

@@ -91,6 +91,60 @@ test("los no usados conservan su orden original y van después de los usados", (
 	assert.deepEqual(values(orderByFrecency(items, store, NOW)), ["skill:z", "skill:a", "skill:b", "skill:c", "skill:d"]);
 });
 
+test("solo los 3 de mayor puntaje suben al principio", () => {
+	const store: FrecencyStore = {
+		commands: {
+			"skill:a": { count: 2, lastUsed: NOW },
+			"skill:b": { count: 4, lastUsed: NOW },
+			"skill:c": { count: 9, lastUsed: NOW },
+			"skill:e": { count: 1, lastUsed: NOW },
+		},
+	};
+	const items = [item("skill:a"), item("skill:b"), item("skill:c"), item("skill:d"), item("skill:e")];
+
+	// Top 3: c, b, a. El usado que no entró (e) vuelve a su lugar original en vez
+	// de quedar agrupado con los promovidos.
+	assert.deepEqual(values(orderByFrecency(items, store, NOW)), ["skill:c", "skill:b", "skill:a", "skill:d", "skill:e"]);
+});
+
+test("la cola conserva el orden original aunque tenga usos", () => {
+	const store: FrecencyStore = {
+		commands: {
+			"skill:c": { count: 9, lastUsed: NOW },
+			"skill:f": { count: 4, lastUsed: NOW },
+			"skill:g": { count: 3, lastUsed: NOW },
+			"skill:b": { count: 1, lastUsed: NOW },
+		},
+	};
+	const items = ["skill:a", "skill:b", "skill:c", "skill:d", "skill:e", "skill:f", "skill:g"].map(item);
+
+	assert.deepEqual(
+		values(orderByFrecency(items, store, NOW)),
+		["skill:c", "skill:f", "skill:g", "skill:a", "skill:b", "skill:d", "skill:e"],
+	);
+});
+
+test("el tope de promovidos es configurable", () => {
+	const store: FrecencyStore = {
+		commands: {
+			"skill:a": { count: 2, lastUsed: NOW },
+			"skill:c": { count: 9, lastUsed: NOW },
+		},
+	};
+	const items = [item("skill:a"), item("skill:b"), item("skill:c")];
+
+	assert.deepEqual(values(orderByFrecency(items, store, NOW, 1)), ["skill:c", "skill:a", "skill:b"]);
+	assert.deepEqual(values(orderByFrecency(items, store, NOW, 5)), ["skill:c", "skill:a", "skill:b"]);
+	assert.deepEqual(values(orderByFrecency(items, store, NOW, 0)), ["skill:a", "skill:b", "skill:c"]);
+});
+
+test("si los usados entran todos en el top, ordenan como antes", () => {
+	const store: FrecencyStore = { commands: { "skill:c": { count: 9, lastUsed: NOW } } };
+	const items = [item("skill:a"), item("skill:b"), item("skill:c"), item("skill:d")];
+
+	assert.deepEqual(values(orderByFrecency(items, store, NOW)), ["skill:c", "skill:a", "skill:b", "skill:d"]);
+});
+
 test("empates de puntaje conservan el orden original", () => {
 	const store: FrecencyStore = {
 		commands: {

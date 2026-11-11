@@ -1,6 +1,6 @@
 {
   "name": "gentle-slash-frecency",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pi extension that sorts the slash-command autocomplete by frecency, so the skills and prompts you use most appear first.",
   "license": "MIT",
   "author": "Pablo Miguez",
@@ -19,7 +19,9 @@
     "autocomplete"
   ],
   "pi": {
-    "extensions": ["./extensions/gentle-slash-frecency.ts"]
+    "extensions": [
+      "./extensions/gentle-slash-frecency.ts"
+    ]
   },
   "files": [
     "extensions",

@@ -15,6 +15,13 @@ export const MAX_ENTRIES = 200;
  */
 export const HALF_LIFE_MS = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * Cuántos comandos suben al principio de la lista. La ventana visible del
+ * autocompletado muestra cinco filas, así que tres promovidos dejan dos de cola
+ * a la vista; y solo cambian tres posiciones cuando cambia lo que más se usa.
+ */
+export const TOP_COUNT = 3;
+
 /** Uso acumulado de un comando. */
 export interface CommandUsage {
 	/** Veces que se ejecutó. */
@@ -119,24 +126,31 @@ export function recordUsage(store: FrecencyStore, command: string, now: number):
 }
 
 /**
- * Ordena las sugerencias de autocompletado: primero los comandos usados, por
- * puntaje descendente; después los no usados en su orden original. Es una
- * permutación estable: no agrega, quita ni reescribe items.
+ * Ordena las sugerencias de autocompletado: arriba los `topCount` comandos de
+ * mayor puntaje, en orden descendente; el resto conserva el orden original, tenga
+ * usos o no. Es una permutación estable: no agrega, quita ni reescribe items.
  */
 export function orderByFrecency<T extends { value: string }>(
 	items: readonly T[],
 	store: FrecencyStore,
 	now: number,
+	topCount: number = TOP_COUNT,
 ): T[] {
-	const decorated = items.map((item, index) => {
-		const usage = store.commands[commandKey(item.value)];
-		return { item, index, score: usage ? frecencyScore(usage, now) : undefined };
+	const decorated = items.map((entry, index) => {
+		const usage = store.commands[commandKey(entry.value)];
+		return { item: entry, index, score: usage ? frecencyScore(usage, now) : undefined };
 	});
 
-	const used = decorated
+	const promoted = decorated
 		.filter((entry) => entry.score !== undefined)
-		.sort((a, b) => (b.score as number) - (a.score as number) || a.index - b.index);
-	const unused = decorated.filter((entry) => entry.score === undefined);
+		.sort((a, b) => (b.score as number) - (a.score as number) || a.index - b.index)
+		.slice(0, Math.max(0, topCount));
+	if (promoted.length === 0) return items.slice();
 
-	return [...used, ...unused].map((entry) => entry.item);
+	// La cola se arma con los índices que quedaron afuera, en el orden en que
+	// llegaron: un comando usado que no entró al top no se mueve.
+	const promotedIndexes = new Set(promoted.map((entry) => entry.index));
+	const rest = decorated.filter((entry) => !promotedIndexes.has(entry.index));
+
+	return [...promoted, ...rest].map((entry) => entry.item);
 }
